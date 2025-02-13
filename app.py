@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import os
-import json
 from document_processor import process_documents
 
 app = Flask(__name__)
@@ -19,7 +18,7 @@ def upload_files():
     if request.method == 'POST':
         files = request.files.getlist('files')  # Get multiple files
         uploaded_files = []
-        
+
         for file in files:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
@@ -30,7 +29,7 @@ def upload_files():
         if not uploaded_files:
             return jsonify({'error': 'No valid PDF files uploaded'})
 
-        # Process documents
+        # Process all uploaded documents
         results = process_documents(uploaded_files)
 
         return jsonify({'documents': results})

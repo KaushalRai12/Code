@@ -5,13 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Classification</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 500px;
+            padding: 20px;
+            text-align: center;
+            margin: auto;
+        }
+        #drop-area.highlight {
+            border-color: purple;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+        #fileElem {
+            display: none;
+        }
+        /* Spinner Styles */
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #007bff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload Documents for Classification</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileElem" name="files" multiple accept="application/pdf">
-        <button type="submit">Upload</button>
-    </form>
+    <h1>Upload and Analyze Documents</h1>
+    <div id="drop-area">
+        <form class="my-form">
+            <p>Drag & drop multiple PDF files here or click to select</p>
+            <input type="file" id="fileElem" name="files" multiple accept="application/pdf">
+            <label class="button" for="fileElem">Select Files</label>
+        </form>
+        <p id="status"></p>
+    </div>
+    <button id="analyzeButton" class="button">Analyze</button>
+
+    <!-- Spinner -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Analyzing documents, please wait...</p>
+    </div>
 
     <table id="resultsTable">
         <thead>
@@ -25,13 +80,50 @@
     </table>
 
     <script>
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        let dropArea = document.getElementById('drop-area');
+        let fileElem = document.getElementById('fileElem');
+        let analyzeButton = document.getElementById('analyzeButton');
+        let status = document.getElementById('status');
+        let outputTable = document.querySelector('#resultsTable tbody');
+        let loadingSpinner = document.getElementById('loading');
+        let selectedFiles = [];
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
             e.preventDefault();
-            let formData = new FormData();
-            let files = document.getElementById('fileElem').files;
-            for (let i = 0; i < files.length; i++) {
-                formData.append('files', files[i]);
+            e.stopPropagation();
+        }
+
+        dropArea.addEventListener('drop', function(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        });
+
+        fileElem.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            status.textContent = `${selectedFiles.length} file(s) ready for analysis.`;
+        }
+
+        analyzeButton.addEventListener('click', function() {
+            if (selectedFiles.length === 0) {
+                alert("Please select at least one PDF.");
+                return;
             }
+
+            let formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+
+            // Show spinner while processing
+            loadingSpinner.style.display = "block";
+            outputTable.innerHTML = ''; // Clear old results
 
             fetch('/', {
                 method: 'POST',
@@ -39,18 +131,24 @@
             })
             .then(response => response.json())
             .then(data => {
-                let tableBody = document.querySelector('#resultsTable tbody');
-                tableBody.innerHTML = '';
+                outputTable.innerHTML = '';
                 data.documents.forEach(doc => {
                     let row = `<tr>
                         <td>${doc.document_name}</td>
                         <td>${doc.category}</td>
                         <td>${doc.summary}</td>
                     </tr>`;
-                    tableBody.innerHTML += row;
+                    outputTable.innerHTML += row;
                 });
+
+                // Hide spinner after processing
+                loadingSpinner.style.display = "none";
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                status.textContent = 'An error occurred during analysis.';
+                loadingSpinner.style.display = "none";
+            });
         });
     </script>
 </body>
