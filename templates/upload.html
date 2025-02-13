@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Upload and Text Extraction</title>
+    <style>
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 480px;
+            padding: 20px;
+            text-align: center;
+        }
+        #drop-area.highlight {
+            border-color: purple;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px;
+            background: #ccc;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #fileElem {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload PDF and Extract Text</h1>
+    <div id="drop-area">
+        <form class="my-form">
+            <p>Upload a PDF file with the file dialog or by dragging and dropping onto the dashed region</p>
+            <input type="file" id="fileElem" accept="application/pdf">
+            <label class="button" for="fileElem">Select a PDF file</label>
+        </form>
+        <p id="status"></p>
+    </div>
+    <button id="extractButton" style="display: none;">Extract Text</button>
+    <div id="output"></div>
+
+    <script>
+        let dropArea = document.getElementById('drop-area');
+        let status = document.getElementById('status');
+        let extractButton = document.getElementById('extractButton');
+        let output = document.getElementById('output');
+        let uploadedFileName = '';
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('highlight');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('highlight');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFiles(files);
+        }
+
+        let fileElem = document.getElementById('fileElem');
+        fileElem.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+
+        function uploadFile(file) {
+            let formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    status.textContent = 'Error: ' + data.error;
+                } else {
+                    status.textContent = 'File uploaded successfully';
+                    uploadedFileName = data.filename;
+                    extractButton.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                status.textContent = 'An error occurred during upload.';
+            });
+        }
+
+        extractButton.addEventListener('click', function() {
+            fetch('/extract', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({filename: uploadedFileName})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    output.textContent = 'Error: ' + data.error;
+                } else {
+                    output.textContent = data.text;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                output.textContent = 'An error occurred during text extraction.';
+            });
+        });
+    </script>
+</body>
+</html>
