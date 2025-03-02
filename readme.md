@@ -10,7 +10,7 @@ This code provides functionality for [brief description of what the code does]. 
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone [repository-url]
+   git clone [https://github.com/KaushalRai12/Code]
    ```
 
 2. Install required dependencies:
@@ -33,4 +33,4 @@ This code provides functionality for [brief description of what the code does]. 
 - Describe any configuration files or environment variables that need to be set
 - Explain any important parameters or settings
 
-## Examples
+
