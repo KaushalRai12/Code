@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Classification Graph</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Document Classification Overview</h1>
+    
+    <!-- Graph Image -->
+    <img id="classificationGraph" src="{{ url_for('get_graph') }}" alt="Document Classification Graph">
+    
+    <br>
+    <a href="/">← Back to Upload</a>
+</body>
+</html>

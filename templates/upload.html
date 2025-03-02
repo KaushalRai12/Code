@@ -29,7 +29,6 @@
         #fileElem {
             display: none;
         }
-        /* Spinner Styles */
         #loading {
             display: none;
             text-align: center;
@@ -52,6 +51,15 @@
 </head>
 <body>
     <h1>Upload and Analyze Documents</h1>
+
+    <!-- Model Selection Dropdown -->
+    <label for="modelSelect">Select AI Model:</label>
+    <select id="modelSelect">
+        <option value="chatgpt" selected>Chat GPT</option>
+        <option value="local_chatgpt">Local ChatGPT</option>
+        <option value="local_deepseek">Local DeepSeek</option>
+    </select>
+
     <div id="drop-area">
         <form class="my-form">
             <p>Drag & drop multiple PDF files here or click to select</p>
@@ -68,17 +76,33 @@
         <p>Analyzing documents, please wait...</p>
     </div>
 
-    <table id="resultsTable">
-        <thead>
-            <tr>
-                <th>Document Name</th>
-                <th>Category</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    
+    <!-- Tabs for Table and Graphs -->
+    <div class="tabs">
+        <button class="tab-button active" onclick="showTab('resultsTab')">Results</button>
+        <button class="tab-button" onclick="showTab('graphsTab')">Graphs</button>
+    </div>
+
+    <!-- Results Table -->
+    <div id="resultsTab" class="tab-content">
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Document Name</th>
+                    <th>Document Type</th>
+                    <th>Sensitivity</th>
+                    <th>Confidence (%)</th>
+                    <th>Summary</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Graphs Tab -->
+    <div id="graphsTab" class="tab-content" style="display: none;">
+        <h2>Document Classification Overview</h2>
+        <img id="classificationGraph" src="{{ url_for('get_graph') }}" alt="Document Classification Graph">
+    </div>
 
     <script>
         let dropArea = document.getElementById('drop-area');
@@ -89,20 +113,11 @@
         let loadingSpinner = document.getElementById('loading');
         let selectedFiles = [];
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        function showTab(tabId) {
+            document.getElementById('resultsTab').style.display = 'none';
+            document.getElementById('graphsTab').style.display = 'none';
+            document.getElementById(tabId).style.display = 'block';
         }
-
-        dropArea.addEventListener('drop', function(e) {
-            let dt = e.dataTransfer;
-            let files = dt.files;
-            handleFiles(files);
-        });
 
         fileElem.addEventListener('change', function() {
             handleFiles(this.files);
@@ -120,9 +135,10 @@
             }
 
             let formData = new FormData();
+            let model = document.getElementById('modelSelect').value;
+            formData.append('model', model);
             selectedFiles.forEach(file => formData.append('files', file));
 
-            // Show spinner while processing
             loadingSpinner.style.display = "block";
             outputTable.innerHTML = ''; // Clear old results
 
@@ -132,17 +148,24 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("API Response:", data);  // Debugging: Check API response in browser console
                 outputTable.innerHTML = '';
-                data.documents.forEach(doc => {
-                    let row = `<tr>
-                        <td>${doc.document_name}</td>
-                        <td>${doc.category}</td>
-                        <td>${doc.summary}</td>
-                    </tr>`;
-                    outputTable.innerHTML += row;
-                });
 
-                // Hide spinner after processing
+                if (!data.documents || data.documents.length === 0) {
+                    outputTable.innerHTML = "<tr><td colspan='5'>No data found</td></tr>";
+                } else {
+                    data.documents.forEach(doc => {
+                        let row = `<tr>
+                            <td>${doc.document_name}</td>
+                            <td>${doc.document_type}</td>
+                            <td>${doc.sensitive}</td>
+                            <td>${doc.confidence}</td>
+                            <td>${doc.summary}</td>
+                        </tr>`;
+                        outputTable.innerHTML += row;
+                    });
+                }
+
                 loadingSpinner.style.display = "none";
             })
             .catch(error => {
