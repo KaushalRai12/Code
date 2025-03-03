@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 
 # Load API key from .env file
 load_dotenv()
-api_key = os.getenv('OPENAI_API_KEY')
 
-client = openai.OpenAI(api_key=api_key)
+# Initialize OpenAI client
+client = openai.OpenAI()
 
 DOCUMENT_CATEGORIES = {
     "Identity Documents": ["Passport", "Drivers License", "National ID", "Social Security Card"],
@@ -67,9 +67,10 @@ def analyze_document(text, model):
         elif model in ["local_chatgpt", "local_deepseek"]:
             # Placeholder for local LLM implementation
             return "Local LLM processing not implemented yet."
+    except openai.OpenAIError as e:
+        return f"❌ OpenAI API Error: {str(e)}"
     except Exception as e:
-        return f"Error: {str(e)}"
-
+        return f"❌ General Error: {str(e)}"
 
 def extract_category(analysis):
     """Extracts category safely from AI response"""
@@ -102,21 +103,25 @@ def process_documents(file_paths, model):
     results = []
 
     for file_path in file_paths:
-        text = extract_text_from_pdf(file_path)
-        analysis = analyze_document(text, model)
-        category = extract_category(analysis)
-        sensitivity = determine_sensitivity(text)
-        confidence = round(compute_confidence(text, category), 2)
-        summary = ' '.join(analysis.split()[:25])  # Limit summary to 25 words
+        try:
+            text = extract_text_from_pdf(file_path)
+            analysis = analyze_document(text, model)
+            category = extract_category(analysis)
+            sensitivity = determine_sensitivity(text)
+            confidence = round(compute_confidence(text, category), 2)
+            summary = ' '.join(analysis.split()[:25])  # Limit summary to 25 words
 
-        results.append({
-            'document_name': os.path.basename(file_path),
-            'document_type': category,
-            'sensitive': sensitivity,
-            'confidence': confidence,
-            'summary': summary
-        })
+            results.append({
+                'document_name': os.path.basename(file_path),
+                'document_type': category,
+                'sensitive': sensitivity,
+                'confidence': confidence,
+                'summary': summary
+            })
 
-        os.remove(file_path)  # Cleanup processed files
+            os.remove(file_path)  # Cleanup processed files
+
+        except Exception as e:
+            print(f"❌ Error processing {file_path}: {e}")
 
     return results
