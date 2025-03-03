@@ -57,7 +57,7 @@ def analyze_document(text, model):
 
         if model == "chatgpt":
             response = client.chat.completions.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-3.5-turbo", # gpt-4-turbo-preview
                 messages=[
                     {"role": "system", "content": "You are a document classification assistant."},
                     {"role": "user", "content": prompt}
